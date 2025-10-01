@@ -1,0 +1,102 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: kote-vision-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: kote_vision
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d kote_vision" ]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  minio:
+    image: minio/minio:latest
+    container_name: kote-vision-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: password
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web UI
+    volumes:
+      - minio_data:/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: kote-vision-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  frontend:
+    image: victortrumpel/kote-vision-front:latest
+    container_name: kote-vision-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+      - file-service
+
+  server:
+    image: victortrumpel/kote-vision-server:latest
+    container_name: kote-vision-server
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_URL: "postgres://admin:password@db:5432/kote_vision?sslmode=disable"
+      REDIS_URL: "redis://redis:6379"
+
+      S3_ACCESS_KEY_ID: "admin"
+      S3_ENDPOINT: "http://minio:9000"
+      S3_SECRET_ACCESS_KEY: "password"
+
+      NEURO_URL: "http://neuro:8081"
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  file-service:
+    image: victortrumpel/kote-vision-file-service:latest
+    container_name: kote-vision-file-service
+    ports:
+      - "4000:4000"
+    environment:
+      S3_ADMIN_USER: "admin"
+      S3_API_URL: "http://minio:9000"
+      S3_ADMIN_PASSWORD: "password"
+
+    depends_on:
+      - minio
+
+  neuro:
+    image: victortrumpel/kote-vision-neuro:latest
+    container_name: kote-vision-neuro
+    ports:
+      - "8081:8081"
+    depends_on:
+      - server
+    environment:
+      S3_ACCESS_KEY_ID: "admin"
+      S3_ENDPOINT: "http://minio:9000"
+      S3_SECRET_ACCESS_KEY: "password"
+
+volumes:
+  db_data:
+  redis_data:
+  minio_data:
