@@ -1,4 +1,4 @@
-#### Развернуть систему локально
+# Как развернуть систему локально?
 
 [Как пользоваться?](https://docs.google.com/document/d/1HuOshKIO-VWJ_HH_N5DAGP4fWpZiQ89fu-MJJ7GZDAs/edit?tab=t.0)
 
