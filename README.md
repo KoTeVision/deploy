@@ -17,5 +17,5 @@ docker compose up -d
 3. Перейдите на веб интерфейс по ссылке:
 
 ```
-http://localhost:5173
+[http://localhost:5173](http://localhost:5173)
 ```
